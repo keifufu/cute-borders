@@ -7,7 +7,7 @@ window_rules:
   - match: "Title"
     contains: "Mozilla Firefox"
     active_border_color: "#c6a0f6"
-    inactive_border_color: "#fffff"
+    inactive_border_color: "#ffffff"
   - match: "Class"
     contains: "MozillaWindowClass"
     active_border_color: "#c6a0f6"
