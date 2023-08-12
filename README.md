@@ -5,8 +5,8 @@ Windows 11 only.
 
 ## Preview
 
-![Zoom](htps://github.com/keifufu/cute-borders/blob/main/img/zoom.png?raw=true)
-![Fullscreen](htps://github.com/keifufu/cute-borders/blob/main/img/fullscreen.png?raw=true)
+![Zoom](img/fullscreen.png?raw=true)
+![Fullscreen](img/fullscreen.png?raw=true)
 
 ## Installing
 
