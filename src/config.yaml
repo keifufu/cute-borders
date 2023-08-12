@@ -1,0 +1,14 @@
+run_at_startup: false
+window_rules:
+  - match: "Global"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#ffffff"
+  # Example rules
+  - match: "Title"
+    contains: "Mozilla Firefox"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#fffff"
+  - match: "Class"
+    contains: "MozillaWindowClass"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#ffffff"
