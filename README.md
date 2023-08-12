@@ -34,3 +34,8 @@ window_rules:
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
 ```
+
+# TODO
+
+- square window option
+- draw thick border with direct2d
