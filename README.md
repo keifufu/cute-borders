@@ -5,7 +5,7 @@ Windows 11 only.
 
 ## Preview
 
-![Zoom](img/fullscreen.png?raw=true)
+![Zoom](img/zoom.png?raw=true)
 ![Fullscreen](img/fullscreen.png?raw=true)
 
 ## Installing
