@@ -38,4 +38,4 @@ window_rules:
 # TODO
 
 - square window option
-- draw thick border with direct2d
+- draw thick borders with direct2d (could be used as a fallback for 1px borders on windows 10)
