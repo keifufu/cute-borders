@@ -1,8 +1,12 @@
 use std::{
+  env,
   fs::{self, File, OpenOptions},
   io::Write,
-  path::Path,
+  path::{Path, PathBuf},
 };
+
+use winapi::um::winnt::{KEY_READ, KEY_WRITE};
+use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 use crate::{logger::Logger, DWMWA_COLOR_DEFAULT};
 
@@ -19,13 +23,10 @@ pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
   let filepath = format!("{}\\{}", dirpath, filename);
 
   if !Path::new(&dirpath).exists() {
-    match fs::create_dir(&dirpath) {
-      Ok(_) => {}
-      Err(err) => {
-        Logger::log(&format!("[ERROR] Failed to create directory: {}", &dirpath));
-        Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
-      }
+    if let Err(err) = fs::create_dir(&dirpath) {
+      Logger::log(&format!("[ERROR] Failed to create directory: {}", &dirpath));
+      Logger::log(&format!("[DEBUG] {:?}", err));
+      std::process::exit(1);
     }
   }
 
@@ -39,13 +40,10 @@ pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
       }
     };
 
-    match file.write_all(default_content.as_bytes()) {
-      Ok(_) => {}
-      Err(err) => {
-        Logger::log(&format!("[ERROR] Failed to write to file: {}", &filepath));
-        Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
-      }
+    if let Err(err) = file.write_all(default_content.as_bytes()) {
+      Logger::log(&format!("[ERROR] Failed to write to file: {}", &filepath));
+      Logger::log(&format!("[DEBUG] {:?}", err));
+      std::process::exit(1);
     }
   }
 
@@ -81,6 +79,107 @@ pub fn hex_to_colorref(hex: &str) -> u32 {
     _ => {
       Logger::log(&format!("[ERROR] Invalid hex: {}", hex));
       DWMWA_COLOR_DEFAULT
+    }
+  }
+}
+
+fn get_registry_key() -> Option<RegKey> {
+  match RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(
+    "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+    KEY_READ | KEY_WRITE,
+  ) {
+    Ok(key) => Some(key),
+    Err(err) => {
+      Logger::log("[ERROR] Failed to open registry key");
+      Logger::log(&format!("[DEBUG] {:?}", err));
+      None
+    }
+  }
+}
+
+fn key_exists(app_name: &str) -> bool {
+  match get_registry_key() {
+    Some(key) => key.get_raw_value(app_name).is_ok(),
+    None => false,
+  }
+}
+
+pub fn enable_startup() {
+  if key_exists("cute-borders") {
+    return;
+  }
+
+  let exe_path = match env::current_exe() {
+    Ok(path) => path,
+    Err(err) => {
+      Logger::log("[ERROR] Failed to find own executable path");
+      Logger::log(&format!("[DEBUG] {:?}", err));
+      return;
+    }
+  };
+
+  let user_profile_path = match std::env::var("USERPROFILE") {
+    Ok(user_profile_path) => user_profile_path,
+    Err(err) => {
+      Logger::log("[ERROR] Failed to find USERPROFILE environment variable");
+      Logger::log(&format!("[DEBUG] {:?}", err));
+      std::process::exit(1);
+    }
+  };
+  let new_exe_path = PathBuf::from(format!(
+    "{}\\.cuteborders\\cute-borders.exe",
+    user_profile_path,
+  ));
+
+  if exe_path != new_exe_path {
+    if Path::new(&new_exe_path).exists() {
+      match fs::remove_file(&new_exe_path) {
+        Ok(_) => {}
+        Err(err) => {
+          Logger::log(&format!(
+            "[ERROR] Failed to delete file: {}",
+            &new_exe_path.to_string_lossy()
+          ));
+          Logger::log(&format!("[DEBUG] {:?}", err));
+          return;
+        }
+      }
+    }
+
+    match fs::copy(&exe_path, &new_exe_path) {
+      Ok(_) => {}
+      Err(err) => {
+        Logger::log(&format!(
+          "[ERROR] Failed to copy file: {} to: {}",
+          &exe_path.to_string_lossy(),
+          &new_exe_path.to_string_lossy()
+        ));
+        Logger::log(&format!("[DEBUG] {:?}", err));
+        return;
+      }
+    }
+  }
+
+  if let Some(key) = get_registry_key() {
+    if let Err(err) = key.set_value("cute-borders", &new_exe_path.to_string_lossy().to_string()) {
+      Logger::log("[ERROR] Failed to set registry key");
+      Logger::log(&format!("[DEBUG] {:?}", err));
+    }
+  }
+}
+
+pub fn disable_startup() {
+  if !key_exists("cute-borders") {
+    return;
+  }
+
+  if let Some(key) = get_registry_key() {
+    match key.delete_value("cute-borders") {
+      Ok(_) => {}
+      Err(err) => {
+        Logger::log("[ERROR] Failed to delete registry key");
+        Logger::log(&format!("[DEBUG] {:?}", err));
+      }
     }
   }
 }

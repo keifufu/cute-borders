@@ -1,10 +1,13 @@
 use std::{io::Read, sync::Mutex};
 
-use crate::{logger::Logger, util::get_file};
+use crate::{
+  logger::Logger,
+  util::{disable_startup, enable_startup, get_file},
+};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
-const DEFAULT_CONFIG: &str = include_str!("config.yaml");
+const DEFAULT_CONFIG: &str = include_str!("data/config.yaml");
 
 lazy_static! {
   static ref CONFIG: Mutex<Config> = Mutex::new(Config::new());
@@ -54,6 +57,13 @@ impl Config {
         std::process::exit(1);
       }
     };
+
+    if config.run_at_startup {
+      enable_startup();
+    } else {
+      disable_startup();
+    }
+
     config
   }
   pub fn reload() {

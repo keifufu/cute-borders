@@ -1,16 +1,36 @@
-# cute borders
+# cute-borders
 
-idk, description? only works on win11
+Makes focused and unfocused window borders have a different border color, configurable per program.  
+Windows 11 only.
 
 ## Preview
 
-soon
+![Zoom](htps://github.com/keifufu/cute-borders/blob/main/img/zoom.png?raw=true)
+![Fullscreen](htps://github.com/keifufu/cute-borders/blob/main/img/fullscreen.png?raw=true)
 
-## Settings
+## Installing
 
-soon
+Download it from [GitHub Releases](https://github.com/keifufu/cute-borders/releases/latest)
 
-# TODO
+## Configuration
 
-- tray icon (currently fucking invisible)
-- run_at_startup
+The config is located at `%UserProfile%/.cuteborders/config.yaml`
+
+Example config:
+
+```yaml
+run_at_startup: false
+window_rules:
+  - match: "Global"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#ffffff"
+  # Example rules
+  - match: "Title"
+    contains: "Mozilla Firefox"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#ffffff"
+  - match: "Class"
+    contains: "MozillaWindowClass"
+    active_border_color: "#c6a0f6"
+    inactive_border_color: "#ffffff"
+```

@@ -10,6 +10,7 @@ use tray_icon::menu::Menu;
 use tray_icon::menu::MenuEvent;
 use tray_icon::menu::MenuId;
 use tray_icon::menu::MenuItemBuilder;
+use tray_icon::Icon;
 use tray_icon::TrayIconBuilder;
 use util::hex_to_colorref;
 use winapi::ctypes::c_int;
@@ -86,9 +87,19 @@ fn main() {
       }
     };
 
+    let icon = match Icon::from_resource(1, Some((64, 64))) {
+      Ok(icon) => icon,
+      Err(err) => {
+        Logger::log("[ERROR] Failed to create icon");
+        Logger::log(&format!("[DEBUG] {:?}", err));
+        std::process::exit(1);
+      }
+    };
+
     let tray_icon_builder = TrayIconBuilder::new()
       .with_menu(Box::new(tray_menu))
       .with_menu_on_left_click(true)
+      .with_icon(icon)
       .with_tooltip(format!("cute-borders v{}", env!("CARGO_PKG_VERSION")));
 
     #[allow(unused_variables)]
