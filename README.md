@@ -20,19 +20,23 @@ Example config:
 
 ```yaml
 run_at_startup: false
+square_borders: false
 window_rules:
   - match: "Global"
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
+    border_width: 4
   # Example rules
   - match: "Title"
     contains: "Mozilla Firefox"
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
+    border_width: 4
   - match: "Class"
     contains: "MozillaWindowClass"
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
+    border_width: 4
 ```
 
 # TODO

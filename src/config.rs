@@ -1,9 +1,6 @@
 use std::{io::Read, sync::Mutex};
 
-use crate::{
-  logger::Logger,
-  util::{disable_startup, enable_startup, get_file},
-};
+use crate::{file_util::FileUtil, logger::Logger, startup_util::StartupUtil, CUTE_BORDERS};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +26,7 @@ pub struct WindowRule {
   pub contains: Option<String>,
   pub active_border_color: String,
   pub inactive_border_color: String,
+  pub border_width: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -39,14 +37,14 @@ pub struct Config {
 
 impl Config {
   fn new() -> Self {
-    let mut file = get_file("config.yaml", DEFAULT_CONFIG);
+    let mut file = FileUtil::get_file("config.yaml", DEFAULT_CONFIG);
     let mut contents = String::new();
     match file.read_to_string(&mut contents) {
       Ok(..) => {}
       Err(err) => {
         Logger::log("[ERROR] Failed to read config file");
         Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
+        CUTE_BORDERS.lock().unwrap().drop_and_exit();
       }
     }
     let config: Config = match serde_yaml::from_str(contents.as_str()) {
@@ -54,14 +52,14 @@ impl Config {
       Err(err) => {
         Logger::log("[ERROR] Failed to parse config file");
         Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
+        CUTE_BORDERS.lock().unwrap().drop_and_exit();
       }
     };
 
     if config.run_at_startup {
-      enable_startup();
+      StartupUtil::enable_startup();
     } else {
-      disable_startup();
+      StartupUtil::disable_startup();
     }
 
     config
