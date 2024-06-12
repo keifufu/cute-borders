@@ -5,6 +5,7 @@ window_rules:
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
   # Example rules
+  # color can either be hex or "transparent"
   - match: "Title"
     contains: "Mozilla Firefox"
     active_border_color: "#c6a0f6"

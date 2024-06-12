@@ -14,17 +14,20 @@ Download it from [GitHub Releases](https://github.com/keifufu/cute-borders/relea
 
 ## Configuration
 
-The config is located at `%UserProfile%/.cuteborders/config.yaml`
+The config is located at `%UserProfile%/.cuteborders/config.yaml`.  
+You can open it via the tray icon > Open config
 
 Example config:
 
 ```yaml
 run_at_startup: false
+hide_tray_icon: false
 window_rules:
   - match: "Global"
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
   # Example rules
+  # color can either be hex or "transparent"
   - match: "Title"
     contains: "Mozilla Firefox"
     active_border_color: "#c6a0f6"

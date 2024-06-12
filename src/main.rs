@@ -34,6 +34,7 @@ use winapi::um::winuser::{
 
 const DWMWA_BORDER_COLOR: u32 = 34;
 const DWMWA_COLOR_DEFAULT: u32 = 0xFFFFFFFF;
+const DWMWA_COLOR_NONE: u32 = 0xFFFFFFFE;
 
 mod config;
 mod logger;

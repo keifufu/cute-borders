@@ -8,7 +8,7 @@ use std::{
 use winapi::um::winnt::{KEY_READ, KEY_WRITE};
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
-use crate::{logger::Logger, DWMWA_COLOR_DEFAULT};
+use crate::{logger::Logger, DWMWA_COLOR_DEFAULT, DWMWA_COLOR_NONE};
 
 pub fn get_file_path(filename: &str) -> String {
   let user_profile_path = match std::env::var("USERPROFILE") {
@@ -70,6 +70,10 @@ pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
 }
 
 pub fn hex_to_colorref(hex: &str) -> u32 {
+  if hex == "transparent" {
+    return DWMWA_COLOR_NONE;
+  }
+
   if hex.len() != 7 || !hex.starts_with('#') {
     Logger::log(&format!("[ERROR] Invalid hex: {}", hex));
     return DWMWA_COLOR_DEFAULT;
