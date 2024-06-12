@@ -10,7 +10,7 @@ use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 use crate::{logger::Logger, DWMWA_COLOR_DEFAULT};
 
-pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
+pub fn get_file_path(filename: &str) -> String {
   let user_profile_path = match std::env::var("USERPROFILE") {
     Ok(user_profile_path) => user_profile_path,
     Err(err) => {
@@ -29,6 +29,11 @@ pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
       std::process::exit(1);
     }
   }
+  return filepath;
+}
+
+pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
+  let filepath = get_file_path(filename);
 
   if !Path::new(&filepath).exists() {
     let mut file = match File::create(&filepath) {

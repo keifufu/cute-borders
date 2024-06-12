@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 lazy_static = "1.4.0"
+open = "5.1.4"
 serde = "1.0.183"
 serde_yaml = "0.9.25"
 tray-icon = "0.8.1"

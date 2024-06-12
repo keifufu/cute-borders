@@ -3,6 +3,7 @@
 use config::Config;
 use config::RuleMatch;
 use logger::Logger;
+use util::get_file_path;
 use std::ffi::c_ulong;
 use std::ffi::OsString;
 use std::os::windows::prelude::OsStringExt;
@@ -67,6 +68,11 @@ fn main() {
 
     let tray_menu_builder = Menu::with_items(&[
       &MenuItemBuilder::new()
+        .text("Open config")
+        .enabled(true)
+        .id(MenuId::new("0"))
+        .build(),
+      &MenuItemBuilder::new()
         .text("Reload config")
         .enabled(true)
         .id(MenuId::new("1"))
@@ -113,7 +119,9 @@ fn main() {
     };
 
     MenuEvent::set_event_handler(Some(|event: MenuEvent| {
-      if event.id == MenuId::new("1") {
+      if event.id == MenuId::new("0") {
+        let _ = open::that(get_file_path("config.yaml"));
+      } else if event.id == MenuId::new("1") {
         Config::reload();
         apply_colors(false);
       } else if event.id == MenuId::new("2") {
