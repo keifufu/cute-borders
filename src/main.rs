@@ -1,4 +1,5 @@
 #![windows_subsystem = "windows"]
+#![allow(unused_assignments)]
 
 use config::Config;
 use config::RuleMatch;
@@ -66,69 +67,72 @@ fn main() {
       std::process::exit(1);
     }
 
-    let tray_menu_builder = Menu::with_items(&[
-      &MenuItemBuilder::new()
-        .text("Open config")
-        .enabled(true)
-        .id(MenuId::new("0"))
-        .build(),
-      &MenuItemBuilder::new()
-        .text("Reload config")
-        .enabled(true)
-        .id(MenuId::new("1"))
-        .build(),
-      &MenuItemBuilder::new()
-        .text("Exit")
-        .enabled(true)
-        .id(MenuId::new("2"))
-        .build(),
-    ]);
-
-    let tray_menu = match tray_menu_builder {
-      Ok(tray_menu) => tray_menu,
-      Err(err) => {
-        Logger::log("[ERROR] Failed to build tray icon");
-        Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
-      }
-    };
-
-    let icon = match Icon::from_resource(1, Some((64, 64))) {
-      Ok(icon) => icon,
-      Err(err) => {
-        Logger::log("[ERROR] Failed to create icon");
-        Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
-      }
-    };
-
-    let tray_icon_builder = TrayIconBuilder::new()
-      .with_menu(Box::new(tray_menu))
-      .with_menu_on_left_click(true)
-      .with_icon(icon)
-      .with_tooltip(format!("cute-borders v{}", env!("CARGO_PKG_VERSION")));
-
     #[allow(unused_variables)]
-    let tray_icon = match tray_icon_builder.build() {
-      Ok(tray_icon) => tray_icon,
-      Err(err) => {
-        Logger::log("[ERROR] Failed to build tray icon");
-        Logger::log(&format!("[DEBUG] {:?}", err));
-        std::process::exit(1);
-      }
-    };
-
-    MenuEvent::set_event_handler(Some(|event: MenuEvent| {
-      if event.id == MenuId::new("0") {
-        let _ = open::that(get_file_path("config.yaml"));
-      } else if event.id == MenuId::new("1") {
-        Config::reload();
-        apply_colors(false);
-      } else if event.id == MenuId::new("2") {
-        apply_colors(true);
-        std::process::exit(0);
-      }
-    }));
+    let tray_icon; // needs to be in the main scope
+    if !Config::get().hide_tray_icon.unwrap_or(false) {
+      let tray_menu_builder = Menu::with_items(&[
+        &MenuItemBuilder::new()
+          .text("Open config")
+          .enabled(true)
+          .id(MenuId::new("0"))
+          .build(),
+        &MenuItemBuilder::new()
+          .text("Reload config")
+          .enabled(true)
+          .id(MenuId::new("1"))
+          .build(),
+        &MenuItemBuilder::new()
+          .text("Exit")
+          .enabled(true)
+          .id(MenuId::new("2"))
+          .build(),
+      ]);
+  
+      let tray_menu = match tray_menu_builder {
+        Ok(tray_menu) => tray_menu,
+        Err(err) => {
+          Logger::log("[ERROR] Failed to build tray icon");
+          Logger::log(&format!("[DEBUG] {:?}", err));
+          std::process::exit(1);
+        }
+      };
+  
+      let icon = match Icon::from_resource(1, Some((64, 64))) {
+        Ok(icon) => icon,
+        Err(err) => {
+          Logger::log("[ERROR] Failed to create icon");
+          Logger::log(&format!("[DEBUG] {:?}", err));
+          std::process::exit(1);
+        }
+      };
+  
+      let tray_icon_builder = TrayIconBuilder::new()
+        .with_menu(Box::new(tray_menu))
+        .with_menu_on_left_click(true)
+        .with_icon(icon)
+        .with_tooltip(format!("cute-borders v{}", env!("CARGO_PKG_VERSION")));
+  
+      tray_icon = match tray_icon_builder.build() {
+        Ok(tray_icon) => tray_icon,
+        Err(err) => {
+          Logger::log("[ERROR] Failed to build tray icon");
+          Logger::log(&format!("[DEBUG] {:?}", err));
+          std::process::exit(1);
+        }
+      };
+  
+      MenuEvent::set_event_handler(Some(|event: MenuEvent| {
+        if event.id == MenuId::new("0") {
+          let _ = open::that(get_file_path("config.yaml"));
+        } else if event.id == MenuId::new("1") {
+          Config::reload();
+          apply_colors(false);
+        } else if event.id == MenuId::new("2") {
+          apply_colors(true);
+          std::process::exit(0);
+        }
+      }));
+    }
 
     let mut msg = std::mem::zeroed();
     while GetMessageW(&mut msg, std::ptr::null_mut(), 0, 0) != 0 {

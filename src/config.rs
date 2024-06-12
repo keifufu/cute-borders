@@ -34,6 +34,7 @@ pub struct WindowRule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
   pub run_at_startup: bool,
+  pub hide_tray_icon: Option<bool>, // option because i cant be bothered handling config upgrades
   pub window_rules: Vec<WindowRule>,
 }
 
