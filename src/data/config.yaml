@@ -1,4 +1,3 @@
-run_at_startup: false
 hide_tray_icon: false
 window_rules:
   - match: "Global"

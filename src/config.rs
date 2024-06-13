@@ -1,9 +1,6 @@
 use std::{io::Read, sync::Mutex};
 
-use crate::{
-  logger::Logger,
-  util::{disable_startup, enable_startup, get_file},
-};
+use crate::{logger::Logger, util::get_file};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
@@ -31,10 +28,11 @@ pub struct WindowRule {
   pub inactive_border_color: String,
 }
 
+// Some are Options because i cant be bothered handling config upgrades
+// if they are not defined we just use the default
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
-  pub run_at_startup: bool,
-  pub hide_tray_icon: Option<bool>, // option because i cant be bothered handling config upgrades
+  pub hide_tray_icon: Option<bool>,
   pub window_rules: Vec<WindowRule>,
 }
 
@@ -58,12 +56,6 @@ impl Config {
         std::process::exit(1);
       }
     };
-
-    if config.run_at_startup {
-      enable_startup();
-    } else {
-      disable_startup();
-    }
 
     config
   }

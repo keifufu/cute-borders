@@ -4,8 +4,10 @@ version = "1.1.0"
 edition = "2021"
 
 [dependencies]
+check_elevation = "0.2.4"
 lazy_static = "1.4.0"
 open = "5.1.4"
+planif = "1.0.0"
 serde = "1.0.203"
 serde_yaml = "0.9.34+deprecated"
 tray-icon = "0.14.3"

@@ -1,12 +1,14 @@
 #![windows_subsystem = "windows"]
 #![allow(unused_assignments)]
 
+use check_elevation::is_elevated;
 use config::Config;
 use config::RuleMatch;
 use logger::Logger;
-use util::get_file_path;
 use std::ffi::c_ulong;
+use std::ffi::OsStr;
 use std::ffi::OsString;
+use std::os::windows::ffi::OsStrExt;
 use std::os::windows::prelude::OsStringExt;
 use tray_icon::menu::Menu;
 use tray_icon::menu::MenuEvent;
@@ -14,13 +16,20 @@ use tray_icon::menu::MenuId;
 use tray_icon::menu::MenuItemBuilder;
 use tray_icon::Icon;
 use tray_icon::TrayIconBuilder;
+use util::get_exe_path;
+use util::get_file_path;
 use util::hex_to_colorref;
+use util::set_startup;
 use winapi::ctypes::c_int;
 use winapi::ctypes::c_void;
 use winapi::shared::minwindef::{BOOL, DWORD, LPARAM};
 use winapi::shared::windef::{HWINEVENTHOOK__, HWND};
 use winapi::um::dwmapi::DwmSetWindowAttribute;
 use winapi::um::errhandlingapi::GetLastError;
+use winapi::um::shellapi::ShellExecuteExW;
+use winapi::um::shellapi::SEE_MASK_NOASYNC;
+use winapi::um::shellapi::SEE_MASK_NOCLOSEPROCESS;
+use winapi::um::shellapi::SHELLEXECUTEINFOW;
 use winapi::um::winuser::EnumWindows;
 use winapi::um::winuser::GetClassNameW;
 use winapi::um::winuser::GetWindowTextLengthW;
@@ -41,6 +50,12 @@ mod logger;
 mod util;
 
 fn main() {
+  if let Err(err) = set_startup(true) {
+    Logger::log("[ERROR] Failed to create or update startup task");
+    Logger::log(&format!("[DEBUG] {:?}", err));
+  }
+
+  let is_elevated = is_elevated().unwrap_or(false);
   unsafe {
     let create_hook = SetWinEventHook(
       EVENT_OBJECT_CREATE,
@@ -83,12 +98,17 @@ fn main() {
           .id(MenuId::new("1"))
           .build(),
         &MenuItemBuilder::new()
-          .text("Exit")
+          .text(if is_elevated { "Uninstall" } else { "Install" })
           .enabled(true)
           .id(MenuId::new("2"))
           .build(),
+        &MenuItemBuilder::new()
+          .text("Exit")
+          .enabled(true)
+          .id(MenuId::new("3"))
+          .build(),
       ]);
-  
+
       let tray_menu = match tray_menu_builder {
         Ok(tray_menu) => tray_menu,
         Err(err) => {
@@ -97,7 +117,7 @@ fn main() {
           std::process::exit(1);
         }
       };
-  
+
       let icon = match Icon::from_resource(1, Some((64, 64))) {
         Ok(icon) => icon,
         Err(err) => {
@@ -106,13 +126,13 @@ fn main() {
           std::process::exit(1);
         }
       };
-  
+
       let tray_icon_builder = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
         .with_menu_on_left_click(true)
         .with_icon(icon)
         .with_tooltip(format!("cute-borders v{}", env!("CARGO_PKG_VERSION")));
-  
+
       tray_icon = match tray_icon_builder.build() {
         Ok(tray_icon) => tray_icon,
         Err(err) => {
@@ -121,14 +141,60 @@ fn main() {
           std::process::exit(1);
         }
       };
-  
-      MenuEvent::set_event_handler(Some(|event: MenuEvent| {
+
+      MenuEvent::set_event_handler(Some(move |event: MenuEvent| {
         if event.id == MenuId::new("0") {
           let _ = open::that(get_file_path("config.yaml"));
         } else if event.id == MenuId::new("1") {
           Config::reload();
           apply_colors(false);
         } else if event.id == MenuId::new("2") {
+          if is_elevated {
+            if let Err(err) = set_startup(false) {
+              Logger::log("[ERROR] Failed to create or update startup task");
+              Logger::log(&format!("[DEBUG] {:?}", err));
+            }
+            apply_colors(true);
+            std::process::exit(0);
+          } else {
+            let lp_verb: Vec<u16> = OsStr::new("runas")
+              .encode_wide()
+              .chain(std::iter::once(0))
+              .collect();
+            let d = get_exe_path();
+            let v = d.to_str().unwrap_or_default();
+            let lp_file: Vec<u16> = OsStr::new(&v)
+              .encode_wide()
+              .chain(std::iter::once(0))
+              .collect();
+            let lp_par: Vec<u16> = OsStr::new("")
+              .encode_wide()
+              .chain(std::iter::once(0))
+              .collect();
+
+            let mut sei = SHELLEXECUTEINFOW {
+              cbSize: std::mem::size_of::<SHELLEXECUTEINFOW>() as u32,
+              fMask: SEE_MASK_NOASYNC | SEE_MASK_NOCLOSEPROCESS,
+              lpVerb: lp_verb.as_ptr(),
+              lpFile: lp_file.as_ptr(),
+              lpParameters: lp_par.as_ptr(),
+              nShow: 1,
+              dwHotKey: 0,
+              hInstApp: std::ptr::null_mut(),
+              hMonitor: std::ptr::null_mut(),
+              hProcess: std::ptr::null_mut(),
+              hkeyClass: std::ptr::null_mut(),
+              hwnd: std::ptr::null_mut(),
+              lpClass: std::ptr::null_mut(),
+              lpDirectory: std::ptr::null_mut(),
+              lpIDList: std::ptr::null_mut(),
+            };
+
+            ShellExecuteExW(&mut sei);
+            apply_colors(true);
+            std::process::exit(0);
+          }
+        } else if event.id == MenuId::new("3") {
           apply_colors(true);
           std::process::exit(0);
         }

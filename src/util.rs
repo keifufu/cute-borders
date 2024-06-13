@@ -1,10 +1,19 @@
+use check_elevation::is_elevated;
+use planif::enums::TaskCreationFlags;
+use planif::schedule::TaskScheduler;
+use planif::schedule_builder::Action;
+use planif::schedule_builder::ScheduleBuilder;
+use planif::settings::Duration;
+use planif::settings::LogonType;
+use planif::settings::PrincipalSettings;
+use planif::settings::RunLevel;
+use planif::settings::Settings;
 use std::{
   env,
   fs::{self, File, OpenOptions},
   io::Write,
   path::{Path, PathBuf},
 };
-
 use winapi::um::winnt::{KEY_READ, KEY_WRITE};
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
@@ -92,38 +101,27 @@ pub fn hex_to_colorref(hex: &str) -> u32 {
   }
 }
 
-fn get_registry_key() -> Option<RegKey> {
-  match RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(
+fn clean_old_registry_key() {
+  let key = match RegKey::predef(HKEY_CURRENT_USER).open_subkey_with_flags(
     "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
     KEY_READ | KEY_WRITE,
   ) {
     Ok(key) => Some(key),
-    Err(err) => {
-      Logger::log("[ERROR] Failed to open registry key");
-      Logger::log(&format!("[DEBUG] {:?}", err));
-      None
-    }
+    Err(_) => None,
+  };
+
+  if let Some(key) = key {
+    let _ = key.delete_value("cute-borders");
   }
 }
 
-fn key_exists(app_name: &str) -> bool {
-  match get_registry_key() {
-    Some(key) => key.get_raw_value(app_name).is_ok(),
-    None => false,
-  }
-}
-
-pub fn enable_startup() {
-  if key_exists("cute-borders") {
-    return;
-  }
-
-  let exe_path = match env::current_exe() {
+pub fn get_exe_path() -> PathBuf {
+  let exe_path: PathBuf = match env::current_exe() {
     Ok(path) => path,
     Err(err) => {
       Logger::log("[ERROR] Failed to find own executable path");
       Logger::log(&format!("[DEBUG] {:?}", err));
-      return;
+      std::process::exit(1);
     }
   };
 
@@ -150,7 +148,7 @@ pub fn enable_startup() {
             &new_exe_path.to_string_lossy()
           ));
           Logger::log(&format!("[DEBUG] {:?}", err));
-          return;
+          std::process::exit(1);
         }
       }
     }
@@ -164,31 +162,59 @@ pub fn enable_startup() {
           &new_exe_path.to_string_lossy()
         ));
         Logger::log(&format!("[DEBUG] {:?}", err));
-        return;
+        std::process::exit(1);
       }
     }
   }
 
-  if let Some(key) = get_registry_key() {
-    if let Err(err) = key.set_value("cute-borders", &new_exe_path.to_string_lossy().to_string()) {
-      Logger::log("[ERROR] Failed to set registry key");
-      Logger::log(&format!("[DEBUG] {:?}", err));
-    }
-  }
+  return new_exe_path;
 }
 
-pub fn disable_startup() {
-  if !key_exists("cute-borders") {
-    return;
+pub fn set_startup(enabled: bool) -> Result<(), Box<dyn std::error::Error>> {
+  clean_old_registry_key();
+  let exe_path = get_exe_path();
+  let is_elevated = is_elevated().unwrap_or(false);
+
+  if !is_elevated {
+    return Ok(());
   }
 
-  if let Some(key) = get_registry_key() {
-    match key.delete_value("cute-borders") {
-      Ok(_) => {}
-      Err(err) => {
-        Logger::log("[ERROR] Failed to delete registry key");
-        Logger::log(&format!("[DEBUG] {:?}", err));
-      }
-    }
-  }
+  let ts = TaskScheduler::new()?;
+  let com = ts.get_com();
+  let sb = ScheduleBuilder::new(&com).unwrap();
+
+  let mut settings = Settings::new();
+  settings.stop_if_going_on_batteries = Some(false);
+  settings.disallow_start_if_on_batteries = Some(false);
+  settings.enabled = Some(true);
+
+  let action = Action::new("cute-borders-action", &exe_path.to_string_lossy(), "", "");
+
+  let delay = Duration {
+    seconds: Some(5),
+    // see https://github.com/mattrobineau/planif/commit/ac2e7f79ec8de8935c6292d64533a6c7ce37212e
+    // github has 1.0.1 but crates.io doesnt
+    hours: Some(0),
+    ..Default::default()
+  };
+
+  sb.create_logon()
+    .settings(settings)?
+    .author("keifufu")?
+    .description("cute-borders startup")?
+    .principal(PrincipalSettings {
+      display_name: "".to_string(),
+      group_id: None,
+      id: "".to_string(),
+      logon_type: LogonType::Password,
+      run_level: RunLevel::Highest,
+      user_id: None,
+    })?
+    .trigger("cute-borders-trigger", enabled)?
+    .delay(delay)?
+    .action(action)?
+    .build()?
+    .register("cute-borders", TaskCreationFlags::CreateOrUpdate as i32)?;
+
+  Ok(())
 }

@@ -10,7 +10,11 @@ Windows 11 only.
 
 ## Installing
 
-Download it from [GitHub Releases](https://github.com/keifufu/cute-borders/releases/latest)
+- Download `cute-borders.exe` from [GitHub Releases](https://github.com/keifufu/cute-borders/releases/latest)
+- Start the executable
+- Select "install" in the tray menu
+
+You can then delete the downloaded file
 
 ## Configuration
 
@@ -37,8 +41,3 @@ window_rules:
     active_border_color: "#c6a0f6"
     inactive_border_color: "#ffffff"
 ```
-
-# TODO
-
-- square window option
-- draw thick borders with direct2d (could be used as a fallback for 1px borders on windows 10)
