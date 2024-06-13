@@ -24,7 +24,6 @@ You can open it via the tray icon > Open config
 Example config:
 
 ```yaml
-run_at_startup: false
 hide_tray_icon: false
 window_rules:
   - match: "Global"
