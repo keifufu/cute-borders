@@ -14,7 +14,11 @@ Windows 11 only.
 - Start the executable
 - Select "install" in the tray menu
 
-You can then delete the downloaded file
+## Updating
+
+Assuming you have previously already installed cute-borders:
+- Download the version of cute-borders you want to update to
+- Simply run the executable. It will update automatically and run this version on startup from now on.
 
 ## Configuration
 
