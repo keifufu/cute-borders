@@ -1,5 +1,6 @@
 # Valid colors:
 # - hex (e.g., #ffffff for white)
+# - default (the default windows 11 border)
 # - accent (uses your system's accent color)
 # - rainbow (cycles through a smooth transition of colors)
 # - transparent (invisible border)

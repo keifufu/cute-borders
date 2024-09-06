@@ -83,6 +83,10 @@ pub fn get_file(filename: &str, default_content: &str) -> std::fs::File {
 }
 
 pub fn hex_to_colorref(hex: &str) -> u32 {
+  if hex == "default" {
+    return DWMWA_COLOR_DEFAULT;
+  }
+
   if hex == "transparent" {
     return DWMWA_COLOR_NONE;
   }
