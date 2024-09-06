@@ -17,6 +17,7 @@ Windows 11 only.
 ## Updating
 
 Assuming you have previously already installed cute-borders:
+- Exit cute-borders
 - Download the version of cute-borders you want to update to
 - Simply run the executable. It will update automatically and run this version on startup from now on.
 
