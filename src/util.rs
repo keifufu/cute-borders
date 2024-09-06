@@ -8,6 +8,7 @@ use planif::settings::LogonType;
 use planif::settings::PrincipalSettings;
 use planif::settings::RunLevel;
 use planif::settings::Settings;
+use std::ffi::CString;
 use std::{
   env,
   fs::{self, File, OpenOptions},
@@ -18,6 +19,9 @@ use winapi::shared::minwindef::BOOL;
 use winapi::shared::winerror::SUCCEEDED;
 use winapi::um::dwmapi::DwmGetColorizationColor;
 use winapi::um::winnt::{KEY_READ, KEY_WRITE};
+use winapi::um::winuser::MessageBoxA;
+use winapi::um::winuser::MB_ICONERROR;
+use winapi::um::winuser::MB_OK;
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 use crate::rainbow::Rainbow;
@@ -177,12 +181,20 @@ pub fn get_exe_path() -> PathBuf {
     if Path::new(&new_exe_path).exists() {
       match fs::remove_file(&new_exe_path) {
         Ok(_) => {}
-        Err(err) => {
-          Logger::log(&format!(
-            "[ERROR] Failed to delete file: {}",
-            &new_exe_path.to_string_lossy()
-          ));
-          Logger::log(&format!("[DEBUG] {:?}", err));
+        Err(_err) => {
+          unsafe {
+            let title = CString::new("Failed to update").unwrap();
+            let message = CString::new(
+              "Please close currently running cute-borders to be able to update to this version.",
+            )
+            .unwrap();
+            MessageBoxA(
+              std::ptr::null_mut(),
+              message.as_ptr(),
+              title.as_ptr(),
+              MB_OK | MB_ICONERROR,
+            );
+          }
           std::process::exit(1);
         }
       }
