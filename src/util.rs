@@ -167,6 +167,7 @@ pub fn get_exe_path() -> PathBuf {
       std::process::exit(1);
     }
   };
+  get_file_path("cute-borders.exe"); // this creates the folder
   let new_exe_path = PathBuf::from(format!(
     "{}\\.cuteborders\\cute-borders.exe",
     user_profile_path,
