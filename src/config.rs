@@ -33,6 +33,7 @@ pub struct WindowRule {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
   pub hide_tray_icon: Option<bool>,
+  pub rainbow_speed: Option<f32>,
   pub window_rules: Vec<WindowRule>,
 }
 

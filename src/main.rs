@@ -5,11 +5,13 @@ use check_elevation::is_elevated;
 use config::Config;
 use config::RuleMatch;
 use logger::Logger;
+use rainbow::Rainbow;
 use std::ffi::c_ulong;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStrExt;
 use std::os::windows::prelude::OsStringExt;
+use std::time::Duration;
 use tray_icon::menu::Menu;
 use tray_icon::menu::MenuEvent;
 use tray_icon::menu::MenuId;
@@ -22,10 +24,9 @@ use util::hex_to_colorref;
 use util::set_startup;
 use winapi::ctypes::c_int;
 use winapi::ctypes::c_void;
-use winapi::shared::minwindef::{BOOL, DWORD, LPARAM};
-use winapi::shared::windef::{HWINEVENTHOOK__, HWND};
+use winapi::shared::minwindef::{BOOL, LPARAM};
+use winapi::shared::windef::HWND;
 use winapi::um::dwmapi::DwmSetWindowAttribute;
-use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::shellapi::ShellExecuteExW;
 use winapi::um::shellapi::SEE_MASK_NOASYNC;
 use winapi::um::shellapi::SEE_MASK_NOCLOSEPROCESS;
@@ -36,17 +37,18 @@ use winapi::um::winuser::GetWindowTextLengthW;
 use winapi::um::winuser::GetWindowTextW;
 use winapi::um::winuser::WS_EX_TOOLWINDOW;
 use winapi::um::winuser::{
-  DispatchMessageW, GetForegroundWindow, GetMessageW, IsWindowVisible, SetWinEventHook,
-  TranslateMessage, UnhookWinEvent, EVENT_OBJECT_CREATE, EVENT_OBJECT_DESTROY,
-  EVENT_SYSTEM_FOREGROUND, GWL_EXSTYLE, WINEVENT_OUTOFCONTEXT,
+  DispatchMessageW, GetForegroundWindow, GetMessageW, IsWindowVisible, TranslateMessage,
+  GWL_EXSTYLE,
 };
 
 const DWMWA_BORDER_COLOR: u32 = 34;
 const DWMWA_COLOR_DEFAULT: u32 = 0xFFFFFFFF;
 const DWMWA_COLOR_NONE: u32 = 0xFFFFFFFE;
+const COLOR_INVALID: u32 = 0x000000FF;
 
 mod config;
 mod logger;
+mod rainbow;
 mod util;
 
 fn main() {
@@ -55,34 +57,16 @@ fn main() {
     Logger::log(&format!("[DEBUG] {:?}", err));
   }
 
+  // I will just fucking update everything every 100ms
+  // I might want to do this properly buuuuut I dont even use this myself.
+  std::thread::spawn(|| loop {
+    Rainbow::tick(Config::get().rainbow_speed.unwrap_or(1.0));
+    apply_colors(false);
+    std::thread::sleep(Duration::from_millis(100));
+  });
+
   let is_elevated = is_elevated().unwrap_or(false);
   unsafe {
-    let create_hook = SetWinEventHook(
-      EVENT_OBJECT_CREATE,
-      EVENT_OBJECT_DESTROY,
-      std::ptr::null_mut(),
-      Some(create_window_event),
-      0,
-      0,
-      WINEVENT_OUTOFCONTEXT,
-    );
-
-    let foreground_hook = SetWinEventHook(
-      EVENT_SYSTEM_FOREGROUND,
-      EVENT_SYSTEM_FOREGROUND,
-      std::ptr::null_mut(),
-      Some(foreground_event),
-      0,
-      0,
-      WINEVENT_OUTOFCONTEXT,
-    );
-
-    if create_hook.is_null() || foreground_hook.is_null() {
-      Logger::log("[ERROR] Failed to set up hooks");
-      Logger::log(&format!("[DEBUG] {:?}", GetLastError()));
-      std::process::exit(1);
-    }
-
     #[allow(unused_variables)]
     let tray_icon; // needs to be in the main scope
     if !Config::get().hide_tray_icon.unwrap_or(false) {
@@ -207,36 +191,8 @@ fn main() {
       DispatchMessageW(&msg);
     }
 
-    UnhookWinEvent(create_hook);
-    UnhookWinEvent(foreground_hook);
     apply_colors(true);
   }
-}
-
-unsafe extern "system" fn create_window_event(
-  _h_win_event_hook: *mut HWINEVENTHOOK__,
-  event: DWORD,
-  _hwnd: HWND,
-  _id_object: i32,
-  _id_child: i32,
-  _id_event_thread: DWORD,
-  _dwms_event_time: DWORD,
-) {
-  if event == EVENT_OBJECT_CREATE || event == EVENT_OBJECT_DESTROY {
-    apply_colors(false);
-  }
-}
-
-unsafe extern "system" fn foreground_event(
-  _h_win_event_hook: *mut HWINEVENTHOOK__,
-  _event: DWORD,
-  _hwnd: HWND,
-  _id_object: i32,
-  _id_child: i32,
-  _id_event_thread: DWORD,
-  _dwms_event_time: DWORD,
-) {
-  apply_colors(false);
 }
 
 unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> BOOL {
@@ -253,9 +209,9 @@ unsafe extern "system" fn enum_windows_callback(hwnd: HWND, lparam: LPARAM) -> B
     let ex_style = winapi::um::winuser::GetWindowLongW(hwnd, GWL_EXSTYLE) as c_int;
 
     let mut class_buffer: [u16; 256] = [0; 256];
-    let result = GetClassNameW(hwnd, class_buffer.as_mut_ptr(), class_buffer.len() as c_int);
+    let class_result = GetClassNameW(hwnd, class_buffer.as_mut_ptr(), class_buffer.len() as c_int);
     let mut class_name = String::new();
-    if result > 0 {
+    if class_result > 0 {
       class_name = OsString::from_wide(&class_buffer)
         .to_string_lossy()
         .into_owned();
@@ -278,8 +234,8 @@ fn get_colors_for_window(_hwnd: HWND, title: String, class: String, reset: bool)
   }
 
   let config = Config::get();
-  let mut color_active = DWMWA_COLOR_DEFAULT;
-  let mut color_inactive = DWMWA_COLOR_DEFAULT;
+  let mut color_active = COLOR_INVALID;
+  let mut color_inactive = COLOR_INVALID;
 
   for rule in config.window_rules.iter() {
     match rule.rule_match {

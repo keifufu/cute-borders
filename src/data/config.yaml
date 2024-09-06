@@ -1,10 +1,17 @@
+# Valid colors:
+# - hex (e.g., #ffffff for white)
+# - accent (uses your system's accent color)
+# - rainbow (cycles through a smooth transition of colors)
+# - transparent (invisible border)
+# Invalid colors will be logged to %UserProfile%\.cuteborders\log.txt
+# and will default to red.
 hide_tray_icon: false
+rainbow_speed: 1.0
 window_rules:
   - match: "Global"
-    active_border_color: "#c6a0f6"
-    inactive_border_color: "#ffffff"
+    active_border_color: "accent"
+    inactive_border_color: "transparent"
   # Example rules
-  # color can either be hex or "transparent"
   - match: "Title"
     contains: "Mozilla Firefox"
     active_border_color: "#c6a0f6"

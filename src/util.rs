@@ -14,10 +14,14 @@ use std::{
   io::Write,
   path::{Path, PathBuf},
 };
+use winapi::shared::minwindef::BOOL;
+use winapi::shared::winerror::SUCCEEDED;
+use winapi::um::dwmapi::DwmGetColorizationColor;
 use winapi::um::winnt::{KEY_READ, KEY_WRITE};
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
-use crate::{logger::Logger, DWMWA_COLOR_DEFAULT, DWMWA_COLOR_NONE};
+use crate::rainbow::Rainbow;
+use crate::{logger::Logger, COLOR_INVALID, DWMWA_COLOR_DEFAULT, DWMWA_COLOR_NONE};
 
 pub fn get_file_path(filename: &str) -> String {
   let user_profile_path = match std::env::var("USERPROFILE") {
@@ -83,9 +87,35 @@ pub fn hex_to_colorref(hex: &str) -> u32 {
     return DWMWA_COLOR_NONE;
   }
 
+  if hex == "accent" {
+    let mut colorization: u32 = 0;
+    let mut opaqueblend: BOOL = 0;
+    // should not call this every single fucking time but whatever
+    let result = unsafe { DwmGetColorizationColor(&mut colorization, &mut opaqueblend) };
+    if SUCCEEDED(result) {
+      let red = (colorization & 0x00FF0000) >> 16;
+      let green = (colorization & 0x0000FF00) >> 8;
+      let blue = (colorization & 0x000000FF) >> 0;
+      let bbggrr = (blue << 16) | (green << 8) | red;
+      return bbggrr;
+    } else {
+      Logger::log(&format!(
+        "[ERROR] Failed to retrieve accent color: 0x{:08X})",
+        result
+      ));
+      // Not returning COLOR_INVALID here since the config is not invalid,
+      // instead returning DWMWA_COLOR_DEFAULT to let the system handle it.
+      return DWMWA_COLOR_DEFAULT;
+    }
+  }
+
+  if hex == "rainbow" {
+    return Rainbow::get_color();
+  }
+
   if hex.len() != 7 || !hex.starts_with('#') {
     Logger::log(&format!("[ERROR] Invalid hex: {}", hex));
-    return DWMWA_COLOR_DEFAULT;
+    return COLOR_INVALID;
   }
 
   let r = u8::from_str_radix(&hex[1..3], 16);
@@ -96,7 +126,7 @@ pub fn hex_to_colorref(hex: &str) -> u32 {
     (Ok(r), Ok(g), Ok(b)) => (b as u32) << 16 | (g as u32) << 8 | r as u32,
     _ => {
       Logger::log(&format!("[ERROR] Invalid hex: {}", hex));
-      DWMWA_COLOR_DEFAULT
+      COLOR_INVALID
     }
   }
 }
